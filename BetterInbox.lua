@@ -143,9 +143,6 @@ function BetterInbox:TakeAll( first )
 		for k, v in pairs(checked) do
 			checked[k] = nil
 		end
-		for i = 1, 7 do
-			self.scrollframe.entries[i].bicheckbox:SetValue(false)
-		end
 		-- restore button functionality
 		return
 	end
@@ -305,9 +302,6 @@ function BetterInbox:UpdateInboxScroll()
 			button.hasItem = itemCount
 			button.itemCount = itemCount
 
-			-- set our checkbox
-			entry.bicheckbox:SetValue(checked[index])
-	
 			if wasRead then
 				subjectText:SetTextColor(0.75,0.75,0.75)
 				senderText:SetTextColor(0.75,0.75,0.75)
@@ -461,19 +455,6 @@ function BetterInbox:SetupGUI()
 		entries[i]:SetScript("OnClick", function( ... ) self:Entry_OnClick( ... ) end )
 		entries[i]:SetScript("OnEnter", function( ... ) self:Entry_OnEnter( ... ) end )
 		entries[i]:SetScript("OnLeave", function( ... ) self:Entry_OnLeave( ... ) end )
-
-		entries[i].bicheckbox = AceGUI:Create("CheckBox")
-		entries[i].bicheckbox.frame:SetParent(entries[i])
-		entries[i].bicheckbox.frame:SetPoint("TOPLEFT", entries[i], "TOPLEFT")
-		entries[i].bicheckbox.frame:SetFrameStrata("HIGH")
-		entries[i].bicheckbox.frame:Show()
-		entries[i].bicheckbox.frame:SetWidth(24)
-
-		entries[i].bicheckbox:SetValue(false)
-		entries[i].bicheckbox:SetCallback("OnValueChanged", CheckBoxChanged)
-		entries[i].bicheckbox:SetLabel("")
-		entries[i].bicheckbox.text:Hide()
-		entries[i].bicheckbox.entry = entries[i]
 	end
 	
 	sframe.entries = entries
@@ -498,9 +479,6 @@ function BetterInbox:SetupGUI()
 		["all"] = L["All Mail"],
 		["gold"] = L["All Gold"],
 		["items"] = L["All Items"],
-		["sall"] = L["Selected Mail"],
-		["sgold"] = L["Selected Gold"],
-		["sitems"] = L["Selected Items"],
 	}
 	local defaultValue = "all"
 	openAllValue = defaultValue
