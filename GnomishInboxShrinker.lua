@@ -13,8 +13,6 @@ local AceGUI = LibStub("AceGUI-3.0")
 local iconpath = "Interface\\AddOns\\BetterInbox\\icons"
 local mIndex = 0
 local aIndex = -1
-local openAllValue = nil
-local takeAll = nil
 local inventoryFull = nil
 local checked = {}
 
@@ -63,35 +61,6 @@ function BetterInbox:OnEnable()
 end
 
 function BetterInbox:OnDisable()
-	if self.scrollframe then
-		-- Show Blizzard Elements we replaced
-		for i=1,7 do
-			_G["MailItem"..i]:Show()
-		end
-		InboxPrevPageButton:Show()
-		InboxNextPageButton:Show()
-		self.scrollframe:Hide()
-		self.scrollframe.dropdown.frame:Hide()
-		_G["BetterInboxCancelButton"]:Hide()
-		_G["BetterInboxOpenButton"]:Hide()
-		for i=1,7 do
-			self.scrollframe.entries[i]:Hide()
-		end
-		local summary = self.summary
-		summary.numitems:Hide()
-		summary.numitemsText:Hide()
-		summary.numitemsHover:Hide()
-		summary.money:Hide()
-		summary.moneyText:Hide()
-		summary.moneyHover:Hide()
-		summary.cod:Hide()
-		summary.codHover:Hide()
-		summary.codText:Hide()
-		self.scrollframe.t1:Hide()
-		self.scrollframe.t2:Hide()
-		_G["InboxTitleText"]:SetText(INBOX)
-		HideUIPanel(MailFrame)
-	end
 end
 
 function BetterInbox:MAIL_SHOW()
@@ -102,7 +71,6 @@ end
 
 function BetterInbox:MAIL_CLOSED()
 	-- abort any openall actions
-	takeAll = nil
 	aIndex = -1
 	mIndex = 0
 	inventoryFull = nil
@@ -119,73 +87,11 @@ end
 
 function BetterInbox:MAIL_INBOX_UPDATE()
 	self:UpdateAll()
-	if takeAll then
-		self:TakeAll()
-	end
 end
 
 function BetterInbox:UpdateAll()
 	self:UpdateInboxSummary()
 	self:UpdateInboxScroll()
-end
-
-function BetterInbox:TakeAll( first )
-	local nritems = GetInboxNumItems()
-	if first then
-		mIndex = nritems
-		inventoryFull = nil
-		-- destroy button functionality.
-	end
-	if mIndex <= 0 then
-		takeAll = nil
-		aIndex = -1
-		mIndex = 0
-		for k, v in pairs(checked) do
-			checked[k] = nil
-		end
-		-- restore button functionality
-		return
-	end
-	if not checked[mIndex] and ( openAllValue == "sall" or openAllValue == "sitems" or openAllValue == "sgold" ) then
-		-- skip unchecked mail
-		mIndex = mIndex -1
-		aIndex = -1
-		return self:TakeAll()
-	end
-
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(mIndex)
-	if subject then
-
-		if aIndex == -1 then -- new mail, not tried aattachments yet
-			aIndex = ATTACHMENTS_MAX_RECEIVE -- there can be gaps, so we can't rely on itemCount...
-		end
-		while not GetInboxItem( mIndex, aIndex ) and aIndex > 0 do  -- no attachment here, next!
-			aIndex = aIndex - 1
-		end
-		-- valid mail
-		if aIndex == 0 or openAllValue == "gold" or openAllValue == "sgold" then -- all attachments passed, try and get the moneys
-			-- take money
-			if money > 0 and openAllValue ~= "items" and openAllValue ~= "sitems" then
-				TakeInboxMoney(mIndex)
-				return self:ScheduleTimer("TakeAll", .1)
-			else
-				-- done with this mail, next!
-				mIndex = mIndex - 1
-				aIndex = -1
-			end
-		elseif CODAmount == 0 and not inventoryFull and not isGM then
-			-- take item
-			TakeInboxItem(mIndex, aIndex)
-			return self:ScheduleTimer("TakeAll", .1)
-		else -- skip this mail
-			mIndex = mIndex - 1
-			aIndex = -1
-		end
-	else -- end of the run
-		mIndex = -1
-		aIndex = -1
-	end
-	return self:TakeAll()
 end
 
 function BetterInbox:UpdateInboxSummary()
@@ -380,9 +286,6 @@ function BetterInbox:SetupGUI()
 	-- If we're already fixed up return early
 	if self.scrollframe then
 		self.scrollframe:Show()
-		self.scrollframe.dropdown.frame:Show()
-		_G["BetterInboxOpenButton"]:Show()
-		_G["BetterInboxCancelButton"]:Show()
 		return
 	end
 
@@ -459,50 +362,6 @@ function BetterInbox:SetupGUI()
 
 	sframe.entries = entries
 
-
-
-	local cancel = CreateFrame("Button", "BetterInboxCancelButton", InboxFrame, "UIPanelButtonTemplate")
-	cancel:SetWidth(80)
-	cancel:SetHeight(22)
-	cancel:SetPoint("BOTTOMRIGHT", InboxFrame, "BOTTOMRIGHT", -39, 80)
-	cancel:SetText(CANCEL)
-	cancel:SetScript("OnClick", function() HideUIPanel(MailFrame) end )
-
-	local all = CreateFrame("Button", "BetterInboxOpenButton", InboxFrame, "UIPanelButtonTemplate")
-	all:SetWidth(80)
-	all:SetHeight(22)
-	all:SetPoint("RIGHT", cancel, "LEFT", 0, 0)
-	all:SetText(L["Open"])
-	all:SetScript("OnClick", function() self:TakeAll(true) end )
-
-	local dropdownValues = {
-		["all"] = L["All Mail"],
-		["gold"] = L["All Gold"],
-		["items"] = L["All Items"],
-	}
-	local defaultValue = "all"
-	openAllValue = defaultValue
-
-	local function DropDownChanged( widget, callback, value )
-		openAllValue = value
-	end
-
-	local dropdown = AceGUI:Create("Dropdown")
-	dropdown:SetCallback("OnValueChanged", DropDownChanged )
-	dropdown:SetList( dropdownValues )
-	dropdown:SetValue( defaultValue )
-
-	dropdown.frame:SetParent(InboxFrame)
-	dropdown.frame:SetPoint("BOTTOMRIGHT", InboxFrame, "BOTTOMLEFT", 183, 80)
-	dropdown.frame:SetWidth( 164 )
-	dropdown.frame:SetHeight( 22 )
-	dropdown.frame:SetFrameStrata("HIGH")
-	dropdown.frame:Show()
-
-	dropdown.button:SetFrameStrata("DIALOG")
-	dropdown.button:SetWidth( 22 )
-	dropdown.button:SetHeight( 22 )
-	sframe.dropdown = dropdown
 
 	-- Summary at the top
 	local font = GameFontNormal:GetFont()
