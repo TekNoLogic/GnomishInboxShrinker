@@ -18,6 +18,7 @@ local checked = {}
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BetterInbox")
 
+
 local function GSC(cash)
 	if not cash then return end
 	local g, s, c = floor(cash/10000), floor((cash/100)%100), cash%100
@@ -27,29 +28,29 @@ local function GSC(cash)
 end
 
 
-local function MoneyString( money )
+local function MoneyString(money)
 	local gold = abs(money / 10000)
 	local silver = abs(mod(money / 100, 100))
 	local copper = abs(mod(money, 100))
 	if money >= 10000 then
-		return string.format( "|cffffffff%d|r|cffffd700g|r |cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", gold, silver, copper)
+		return string.format("|cffffffff%d|r|cffffd700g|r |cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", gold, silver, copper)
 	elseif money >= 100 then
-		return string.format( "|cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", silver, copper)
+		return string.format("|cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", silver, copper)
 	else
-		return string.format("|cffffffff%d|r|cffeda55fc|r", copper )
+		return string.format("|cffffffff%d|r|cffeda55fc|r", copper)
 	end
 end
 
-local function FullMoneyString( money )
+local function FullMoneyString(money)
 	local gold = abs(money / 10000)
 	local silver = abs(mod(money / 100, 100))
 	local copper = abs(mod(money, 100))
 	if money >= 10000 then
-		return string.format( "|cffffffff%d|r|cffffd700|r |T"..iconpath.."\\UI-GoldIcon::|t |cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", gold, silver, copper)
+		return string.format("|cffffffff%d|r|cffffd700|r |T"..iconpath.."\\UI-GoldIcon::|t |cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", gold, silver, copper)
 	elseif money >= 100 then
-		return string.format( "|cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", silver, copper)
+		return string.format("|cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", silver, copper)
 	else
-		return string.format("|cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", copper )
+		return string.format("|cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", copper)
 	end
 end
 
@@ -64,13 +65,9 @@ function BetterInbox:OnEnable()
 	self:SecureHook("InboxFrameItem_OnEnter")
 	self:SecureHook("OpenMailFrame_OnHide", "MAIL_INBOX_UPDATE")
 
-	if MailFrame:IsVisible() then
-		self:MAIL_SHOW()
-	end
+	if MailFrame:IsVisible() then self:MAIL_SHOW() end
 end
 
-function BetterInbox:OnDisable()
-end
 
 function BetterInbox:MAIL_SHOW()
 	self:RegisterEvent("UI_ERROR_MESSAGE")
@@ -90,7 +87,7 @@ function BetterInbox:MAIL_CLOSED()
 end
 
 
-function BetterInbox:UI_ERROR_MESSAGE( event, msg )
+function BetterInbox:UI_ERROR_MESSAGE(event, msg)
 	if msg == ERR_INV_FULL then inventoryFull = true end
 end
 
@@ -126,6 +123,7 @@ function BetterInbox:UpdateInboxSummary()
 	end
 end
 
+
 -- Basically a rip from InboxFrame_Update() by Blizzard.
 function BetterInbox:UpdateInboxScroll()
 	if not self.scrollframe then return end
@@ -152,9 +150,9 @@ function BetterInbox:UpdateInboxScroll()
 			else
 				icon = stationeryIcon
 			end
-			buttonIcon:SetTexture( icon )
-			subjectText:SetText( subject )
-			senderText:SetText( sender )
+			buttonIcon:SetTexture(icon)
+			subjectText:SetText(subject)
+			senderText:SetText(sender)
 			SetItemButtonCount(button, itemQuantity)
 			button.index = index
 			entry.index = index -- fallback
@@ -225,6 +223,7 @@ function BetterInbox:UpdateInboxScroll()
 	scrollframe.t1:Show()
 	scrollframe.t2:Show()
 end
+
 
 function BetterInbox:SetupGUI()
 	-- Hide Blizzard Elements we're replacing
@@ -303,51 +302,57 @@ function BetterInbox:SetupGUI()
 
 	--[[ failed attempt to fix bleed into scrollbar
 		local tex1, tex2 = entries[i]:GetRegions()
-		tex1:SetWidth( 233 )
-		tex1:SetTexCoord( 0.1640625, 233/266, 0, 0.75)
+		tex1:SetWidth(233)
+		tex1:SetTexCoord(0.1640625, 233/266, 0, 0.75)
 	--]]
 
 		entries[i]:RegisterForClicks("LeftButtonUp","RightButtonUp")
-		entries[i]:SetScript("OnClick", function( ... ) self:Entry_OnClick( ... ) end )
-		entries[i]:SetScript("OnEnter", function( ... ) self:Entry_OnEnter( ... ) end )
-		entries[i]:SetScript("OnLeave", function( ... ) self:Entry_OnLeave( ... ) end )
+		entries[i]:SetScript("OnClick", function(...) self:Entry_OnClick(...) end)
+		entries[i]:SetScript("OnEnter", function(...) self:Entry_OnEnter(...) end)
+		entries[i]:SetScript("OnLeave", function(...) self:Entry_OnLeave(...) end)
 	end
 
 	sframe.entries = entries
 end
 
-function BetterInbox:SetSendMailShowing( flag )
-	if not flag then -- textures set to the Send Mail Textures
-		MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
-		MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
-		MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
-		MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
-		MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
-	end
+
+function BetterInbox:SetSendMailShowing(flag)
+	if flag then return end -- textures set to the Send Mail Textures
+
+	MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
+	MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
+	MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
+	MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
+	MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
 end
 
-function BetterInbox:Entry_OnEnter( entry )
+
+function BetterInbox:Entry_OnEnter(entry)
 	local button = _G[entry:GetName().."Button"]
-	self:ShowTooltip( button )
+	self:ShowTooltip(button)
 end
 
-function BetterInbox:Entry_OnLeave( entry )
+
+function BetterInbox:Entry_OnLeave(entry)
 	GameTooltip:Hide()
 	SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
 end
 
-function BetterInbox:Entry_OnClick( entry, ... )
+
+function BetterInbox:Entry_OnClick(entry, ...)
 	local button = _G[entry:GetName().."Button"]
-	button:Click( ... )
+	button:Click(...)
 	self:UpdateInboxScroll()
 end
 
+
 function BetterInbox:InboxFrameItem_OnEnter()
-	self:ShowTooltip( this )
+	self:ShowTooltip(this)
 end
 
+
 -- Partial reimplementation of blizzard
-function BetterInbox:ShowTooltip( this )
+function BetterInbox:ShowTooltip(this)
 	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
 	if this.hasItem then
 		if this.itemCount == 1 then
@@ -360,9 +365,9 @@ function BetterInbox:ShowTooltip( this )
 				name, itemTexture, count, quality, canUse = GetInboxItem(this.index,j)
 				if name then
 					if count > 1 then
-						GameTooltip:AddLine( GetInboxItemLink(this.index,j) .. "x" .. count )
+						GameTooltip:AddLine(GetInboxItemLink(this.index,j) .. "x" .. count)
 					else
-						GameTooltip:AddLine( GetInboxItemLink(this.index,j) )
+						GameTooltip:AddLine(GetInboxItemLink(this.index,j))
 					end
 				end
 			end
