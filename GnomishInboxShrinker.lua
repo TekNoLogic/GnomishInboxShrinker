@@ -18,6 +18,15 @@ local checked = {}
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BetterInbox")
 
+local function GSC(cash)
+	if not cash then return end
+	local g, s, c = floor(cash/10000), floor((cash/100)%100), cash%100
+	if g > 0 then return string.format("|cffffd700%d.|cffc7c7cf%02d.|cffeda55f%02d", g, s, c)
+	elseif s > 0 then return string.format("|cffc7c7cf%d.|cffeda55f%02d", s, c)
+	else return string.format("|cffc7c7cf%d", c) end
+end
+
+
 local function MoneyString( money )
 	local gold = abs(money / 10000)
 	local silver = abs(mod(money / 100, 100))
@@ -66,7 +75,7 @@ end
 function BetterInbox:MAIL_SHOW()
 	self:RegisterEvent("UI_ERROR_MESSAGE")
 	self:SetupGUI()
-	self:UpdateAll()
+	self:MAIL_INBOX_UPDATE()
 end
 
 function BetterInbox:MAIL_CLOSED()
@@ -86,89 +95,33 @@ function BetterInbox:UI_ERROR_MESSAGE( event, msg )
 end
 
 function BetterInbox:MAIL_INBOX_UPDATE()
-	self:UpdateAll()
-end
-
-function BetterInbox:UpdateAll()
 	self:UpdateInboxSummary()
 	self:UpdateInboxScroll()
 end
 
+local titletext = InboxTitleText
 function BetterInbox:UpdateInboxSummary()
-	if not self.summary then return end
-	local nritems = GetInboxNumItems()
-	local unreaditems = nritems
-	local totalmoney = 0
-	local totalcod = 0
-	local totalstacks = 0
-	local totalitems = 0
-	local totalsoon = 0
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
-	local name, itemTexture, count, quality, canUse
-	local invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin
-	for i =1, nritems do
-		packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
-		if wasRead then
-			unreaditems = unreaditems - 1
-		end
-		totalmoney = totalmoney + money
-		totalcod = totalcod + CODAmount
-		invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin = GetInboxInvoiceInfo(i)
-		if invoiceType and invoiceType == "seller_temp_invoice" then
-			totalsoon = totalsoon + ( bid + deposit - consignment )
-		end
-		if itemCount and itemCount > 0 then
-			totalstacks = totalstacks + itemCount
-			for j=1, ATTACHMENTS_MAX_RECEIVE do
-				name, itemTexture, count, quality, canUse = GetInboxItem(i,j)
-				if name then
-					totalitems = totalitems + count
-				end
+	local numitems = GetInboxNumItems()
+	local numread, cash, totalitems = 0, 0, 0
+	for i=1,numitems do
+		local _, _, _, _, money, _, _, itemCount, wasRead = GetInboxHeaderInfo(i)
+		if wasRead then numread = numread + 1 end
+		cash = cash + money
+		if (itemCount or 0) > 0 then
+			for j=1,ATTACHMENTS_MAX_RECEIVE do
+				local name, itemTexture, count, quality, canUse = GetInboxItem(i,j)
+				if name then totalitems = totalitems + count end
 			end
 		end
 	end
-	_G["InboxTitleText"]:SetText( string.format(INBOX.." (%d/%d)", unreaditems, nritems) )
-	if totalmoney > 0 then
-		self.summary.money:SetText(FullMoneyString(totalmoney))
-		self.summary.money:Show()
-		self.summary.moneyText:Show()
-		self.summary.moneyHover:Show()
-	else
-		self.summary.money:Hide()
-		self.summary.moneyText:Hide()
-		self.summary.moneyHover:Hide()
-	end
-	if totalsoon > 0 then
-		self.summary.soon:SetText(FullMoneyString(totalsoon))
-		self.summary.soon:Show()
-		self.summary.soonText:Show()
-		self.summary.soonHover:Show()
-	else
-		self.summary.soon:Hide()
-		self.summary.soonText:Hide()
-		self.summary.soonHover:Hide()
-	end
-	if totalcod > 0 then
-		self.summary.cod:SetText(FullMoneyString(totalcod))
-		self.summary.cod:Show()
-		self.summary.codText:Show()
-		self.summary.codHover:Show()
-	else
-		self.summary.cod:Hide()
-		self.summary.codText:Hide()
-		self.summary.codHover:Hide()
-	end
-	if totalitems > 0 then
-		self.summary.numitemsText:SetFormattedText(L["%d items in %d stacks"], totalitems, totalstacks)
-		self.summary.numitemsText:Show()
-		self.summary.numitems:Show()
-		self.summary.numitemsHover:Show()
-	else
-		self.summary.numitemsText:Hide()
-		self.summary.numitems:Hide()
-		self.summary.numitemsHover:Hide()
-	end
-	if unreaditems == 0 then
+
+	local txt = INBOX
+	if numitems > 0 then txt = txt .. " (".. numitems.. ")" end
+	if totalitems > 0 then txt = txt .. " - ".. totalitems.. " items" end
+	if cash > 0 then txt = txt .. " - ".. GSC(cash) end
+	titletext:SetText(txt)
+
+	if numread < numitems then
 		MiniMapMailFrame:Hide()
 	end
 end
@@ -361,106 +314,6 @@ function BetterInbox:SetupGUI()
 	end
 
 	sframe.entries = entries
-
-
-	-- Summary at the top
-	local font = GameFontNormal:GetFont()
-
-
-	self.summary = {}
-	local summary = self.summary
-
-	summary.numitems = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.numitems:SetFont(font, 12)
-	summary.numitems:SetJustifyH( "RIGHT")
-	summary.numitems:SetTextColor( 1, 1, 1, 1)
-	summary.numitems:ClearAllPoints()
-	summary.numitems:SetPoint( "TOPRIGHT", InboxFrame, "TOPLEFT", 160, -75 )
-	summary.numitems:SetText(L["Attachments:"])
-
-	summary.numitemsText = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.numitemsText:SetFont(font, 12)
-	summary.numitemsText:SetJustifyH( "LEFT")
-	summary.numitemsText:SetTextColor( 1, 1, 1, 1)
-	summary.numitemsText:ClearAllPoints()
-	summary.numitemsText:SetPoint( "LEFT", InboxFrame, "LEFT", 170, 0 )
-	summary.numitemsText:SetPoint( "TOP", summary.numitems, "TOP" )
-
-	summary.numitemsHover = CreateFrame('Frame', 'BetterInboxAttachmentsHover', InboxFrame)
-	summary.numitemsHover:SetPoint("TOPLEFT", summary.numitems, "TOPLEFT")
-	summary.numitemsHover:SetPoint("BOTTOMRIGHT", summary.numitemsText, "BOTTOMRIGHT")
-	summary.numitemsHover:SetScript("OnEnter", function( ... ) self:ShowAttachmentTooltip( ... ) end )
-	summary.numitemsHover:SetScript("OnLeave", function() GameTooltip:Hide() end )
-	summary.numitemsHover:EnableMouse(true)
-
-	summary.moneyText = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.moneyText:SetFont(font, 12)
-	summary.moneyText:SetJustifyH("RIGHT")
-	summary.moneyText:SetTextColor( 1, 1, 1, 1)
-	summary.moneyText:ClearAllPoints()
-	summary.moneyText:SetPoint( "TOPRIGHT", InboxFrame, "TOPLEFT", 160, -50 )
-	summary.moneyText:SetText(L["Enclosed:"])
-
-	summary.money = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.money:SetFont(font, 12)
-	summary.money:SetJustifyH( "RIGHT")
-	summary.money:SetTextColor( 1, 1, 1, 1)
-	summary.money:ClearAllPoints()
-	summary.money:SetPoint( "TOPLEFT", InboxFrame, "TOPLEFT", 170, -50 )
-	summary.money:SetText("")
-
-	summary.moneyHover = CreateFrame('Frame', 'BetterInboxMoneyHover', InboxFrame)
-	summary.moneyHover:SetPoint("TOPLEFT", summary.moneyText, "TOPLEFT")
-	summary.moneyHover:SetPoint("BOTTOMRIGHT", summary.money, "BOTTOMRIGHT")
-	summary.moneyHover:SetScript("OnEnter", function( ... ) self:ShowMoneyTooltip( ... ) end )
-	summary.moneyHover:SetScript("OnLeave", function() GameTooltip:Hide() end )
-	summary.moneyHover:EnableMouse(true)
-
-	summary.soonText = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.soonText:SetFont(font, 12)
-	summary.soonText:SetJustifyH( "RIGHT")
-	summary.soonText:SetTextColor( 1, 1, 1, 1)
-	summary.soonText:ClearAllPoints()
-	summary.soonText:SetPoint( "TOPRIGHT", InboxFrame, "TOPLEFT", 160, -65 )
-	summary.soonText:SetText(L["Pending:"])
-
-	summary.soon = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.soon:SetFont(font, 12)
-	summary.soon:SetJustifyH( "RIGHT")
-	summary.soon:SetTextColor( 1, 1, 1, 1)
-	summary.soon:ClearAllPoints()
-	summary.soon:SetPoint( "TOPLEFT", InboxFrame, "TOPLEFT", 170, -65 )
-	summary.soon:SetText("")
-
-	summary.soonHover = CreateFrame('Frame', 'BetterInboxSoonHover', InboxFrame)
-	summary.soonHover:SetPoint("TOPLEFT", summary.soonText, "TOPLEFT")
-	summary.soonHover:SetPoint("BOTTOMRIGHT", summary.soon, "BOTTOMRIGHT")
-	summary.soonHover:SetScript("OnEnter", function( ... ) self:ShowSoonTooltip( ... ) end )
-	summary.soonHover:SetScript("OnLeave", function() GameTooltip:Hide() end )
-	summary.soonHover:EnableMouse(true)
-
-	summary.codText = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.codText:SetFont(font, 12)
-	summary.codText:SetJustifyH( "RIGHT")
-	summary.codText:SetTextColor( 1, 1, 1, 1)
-	summary.codText:ClearAllPoints()
-	summary.codText:SetPoint( "TOPRIGHT", InboxFrame, "TOPLEFT", 160, -80 )
-	summary.codText:SetText(L["Costs:"])
-
-	summary.cod = InboxFrame:CreateFontString(nil, "OVERLAY")
-	summary.cod:SetFont(font, 12)
-	summary.cod:SetJustifyH( "RIGHT")
-	summary.cod:SetTextColor( 1, 1, 1, 1)
-	summary.cod:ClearAllPoints()
-	summary.cod:SetPoint( "TOPLEFT", InboxFrame, "TOPLEFT", 170, -80 )
-	summary.cod:SetText("")
-
-	summary.codHover = CreateFrame('Frame', 'BetterInboxCoDHover', InboxFrame)
-	summary.codHover:SetPoint("TOPLEFT", summary.codText, "TOPLEFT")
-	summary.codHover:SetPoint("BOTTOMRIGHT", summary.cod, "BOTTOMRIGHT")
-	summary.codHover:SetScript("OnEnter", function( ... ) self:ShowCoDTooltip( ... ) end )
-	summary.codHover:SetScript("OnLeave", function() GameTooltip:Hide() end )
-	summary.codHover:EnableMouse(true)
 end
 
 function BetterInbox:SetSendMailShowing( flag )
@@ -528,76 +381,6 @@ function BetterInbox:ShowTooltip( this )
 			SetMoneyFrameColor("GameTooltipMoneyFrame", RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
 		else
 			SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
-		end
-	end
-	GameTooltip:Show()
-end
-
-
-function BetterInbox:ShowMoneyTooltip( this )
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(ENCLOSED_MONEY)
-	local nritems = GetInboxNumItems()
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
-	local invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin
-	for i =1, nritems do
-		invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin = GetInboxInvoiceInfo(i)
-		packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
-		if invoiceType and invoiceType == "seller" then
-			GameTooltip:AddDoubleLine( itemName, MoneyString(money))
-		elseif money > 0 then
-			GameTooltip:AddDoubleLine( sender, MoneyString(money))
-		end
-	end
-	GameTooltip:Show()
-end
-
-function BetterInbox:ShowCoDTooltip( this )
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(L["CoD Costs"])
-	local nritems = GetInboxNumItems()
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
-	for i =1, nritems do
-		packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
-		if CODAmount > 0 then
-			GameTooltip:AddDoubleLine(sender, MoneyString(CODAmount))
-		end
-	end
-	GameTooltip:Show()
-end
-
-function BetterInbox:ShowSoonTooltip( this )
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(L["Delayed Money"])
-	local nritems = GetInboxNumItems()
-	local invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin
-	for i =1, nritems do
-		invoiceType, itemName, playerName, bid, buyout, deposit, consignment, moneyDelay, etaHour, etaMin = GetInboxInvoiceInfo(i)
-		if invoiceType and invoiceType == "seller_temp_invoice" then
-			GameTooltip:AddDoubleLine(itemName, MoneyString( bid + deposit - consignment ))
-		end
-	end
-	GameTooltip:Show()
-end
-
-
-function BetterInbox:ShowAttachmentTooltip( this )
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(L["Attachments"])
-	local nritems = GetInboxNumItems()
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
-	local name, itemTexture, count, quality, canUse
-	for i =1, nritems do
-		packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
-		for j=1, ATTACHMENTS_MAX_RECEIVE do
-			name, itemTexture, count, quality, canUse = GetInboxItem(i,j)
-			if name then
-				if count > 1 then
-					GameTooltip:AddDoubleLine(sender, GetInboxItemLink(i,j) .. "x" .. count )
-				else
-					GameTooltip:AddDoubleLine(sender,GetInboxItemLink(i,j) )
-				end
-			end
 		end
 	end
 	GameTooltip:Show()
