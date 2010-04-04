@@ -465,10 +465,10 @@ end
 
 function BetterInbox:SetSendMailShowing( flag )
 	if not flag then -- textures set to the Send Mail Textures
-		MailFrameTopLeft:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-TopLeft")
-		MailFrameTopRight:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-TopRight")
-		MailFrameBotLeft:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-BotLeft")
-		MailFrameBotRight:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-BotRight")
+		MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
+		MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
+		MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
+		MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
 		MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
 	end
 end
