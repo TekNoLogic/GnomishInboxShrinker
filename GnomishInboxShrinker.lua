@@ -37,7 +37,14 @@ end
 
 
 function BetterInbox:MAIL_SHOW()
-	self:SetupGUI()
+	-- Hide Blizzard Elements we're replacing
+	for i=1,7 do _G["MailItem"..i]:Hide() end
+	InboxPrevPageButton:Hide()
+	InboxNextPageButton:Hide()
+
+	self:SetSendMailShowing(false) -- fix border textures
+
+	if self.SetupGUI then self:SetupGUI() end
 	self:MAIL_INBOX_UPDATE()
 end
 
@@ -74,16 +81,16 @@ end
 
 
 -- Basically a rip from InboxFrame_Update() by Blizzard.
+local rows = {}
 function BetterInbox:UpdateInboxScroll()
 	if not self.scrollframe then return end
 	local scrollframe = self.scrollframe
 	local nritems = GetInboxNumItems()
-	FauxScrollFrame_Update(scrollframe, nritems, 7, 45)
+	FauxScrollFrame_Update(scrollframe, nritems, #rows, 45)
 	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
 	local icon, button, buttonIcon, buttonSlot, subjectText, senderText
-	for i = 1, 7 do
+	for i,row in pairs(rows) do
 		local index = i + FauxScrollFrame_GetOffset(scrollframe)
-		local entry = scrollframe.entries[i]
 		expireTime = _G["BetterInboxItem"..i.."ExpireTime"]
 		button = _G["BetterInboxItem"..i.."Button"]
 		senderText = _G["BetterInboxItem"..i.."Sender"]
@@ -104,7 +111,7 @@ function BetterInbox:UpdateInboxScroll()
 			senderText:SetText(sender)
 			SetItemButtonCount(button, itemQuantity)
 			button.index = index
-			entry.index = index -- fallback
+			row.index = index -- fallback
 			button.hasItem = itemCount
 			button.itemCount = itemCount
 
@@ -159,9 +166,9 @@ function BetterInbox:UpdateInboxScroll()
 			else
 				button:SetChecked(nil)
 			end
-			entry:Show()
+			row:Show()
 		else
-			entry:Hide()
+			row:Hide()
 			button:Hide()
 			senderText:SetText("")
 			subjectText:SetText("")
@@ -175,36 +182,20 @@ end
 
 
 function BetterInbox:SetupGUI()
-	-- Hide Blizzard Elements we're replacing
-	for i=1,7 do
-		_G["MailItem"..i]:Hide()
-	end
-	InboxPrevPageButton:Hide()
-	InboxNextPageButton:Hide()
-
-	self:SetSendMailShowing(false) -- fix border textures
-
 	-- If we're already fixed up return early
-	if self.scrollframe then
-		self.scrollframe:Show()
-		return
-	end
+	if self.scrollframe then return self.scrollframe:Show() end
 
 	-- Scrolling body
 	local sframe = CreateFrame("ScrollFrame", "BetterInboxScrollFrame", InboxFrame, "FauxScrollFrameTemplate")
 	self.scrollframe = sframe
 	sframe:SetParent(InboxFrame)
 	sframe:SetWidth(292)
-	sframe:SetHeight(309)
-	sframe:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 28, -100)
+	-- sframe:SetHeight(309)
+	sframe:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 28, -77)
+	sframe:SetPoint("BOTTOMLEFT", InboxFrame, "BOTTOMLEFT", 28, 84)
 
-	local function updateScroll()
-		self:UpdateInboxScroll()
-	end
-
-	sframe:SetScript("OnVerticalScroll", function(self, offset)
-		FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll)
-	end)
+	local function updateScroll() self:UpdateInboxScroll() end
+	sframe:SetScript("OnVerticalScroll", function(self, offset) FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll) end)
 
 	-- textures for scrollbars
 
@@ -226,36 +217,41 @@ function BetterInbox:SetupGUI()
 
 	sframe.t2 = t2
 
-	-- ScrollFrameEntries
 
-	local entries = {}
-	local kids
+	local function OnEnter(self) BetterInbox:ShowTooltip(self.button) end
 
-	for i =1, 7 do
-		entries[i] = CreateFrame("CheckButton", "BetterInboxItem"..i, InboxFrame, "MailItemTemplate")
-		entries[i]:SetHighlightTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight", "ADD")
-		local high = entries[i]:GetHighlightTexture()
-		high:SetTexCoord(0,1,0,0.5)
+	local function OnLeave()
+		GameTooltip:Hide()
+		SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+	end
 
-		if i == 1 then
-			entries[i]:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 22, -98)
-		else
-			entries[i]:SetPoint("TOPLEFT", entries[i -1], "BOTTOMLEFT")
-		end
+	local function OnClick(self, ...)
+		self.button:Click(...)
+		BetterInbox:UpdateInboxScroll()
+	end
+
+	for i=1,8 do
+		local row = CreateFrame("CheckButton", "BetterInboxItem"..i, InboxFrame, "MailItemTemplate")
+		row.button = _G["BetterInboxItem"..i.."Button"]
+		row:SetHighlightTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight", "ADD")
+		row:GetHighlightTexture():SetTexCoord(0,1,0,0.5)
+
+		if i == 1 then row:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 22, -75)
+		else row:SetPoint("TOPLEFT", rows[i-1], "BOTTOMLEFT") end
 
 	--[[ failed attempt to fix bleed into scrollbar
-		local tex1, tex2 = entries[i]:GetRegions()
+		local tex1, tex2 = row:GetRegions()
 		tex1:SetWidth(233)
 		tex1:SetTexCoord(0.1640625, 233/266, 0, 0.75)
 	--]]
 
-		entries[i]:RegisterForClicks("LeftButtonUp","RightButtonUp")
-		entries[i]:SetScript("OnClick", function(...) self:Entry_OnClick(...) end)
-		entries[i]:SetScript("OnEnter", function(...) self:Entry_OnEnter(...) end)
-		entries[i]:SetScript("OnLeave", function(...) self:Entry_OnLeave(...) end)
+		row:RegisterForClicks("LeftButtonUp","RightButtonUp")
+		row:SetScript("OnClick", OnClick)
+		row:SetScript("OnEnter", OnEnter)
+		row:SetScript("OnLeave", OnLeave)
+		rows[i] = row
 	end
-
-	sframe.entries = entries
+	self.SetupGUI = nil
 end
 
 
@@ -270,27 +266,8 @@ function BetterInbox:SetSendMailShowing(flag)
 end
 
 
-function BetterInbox:Entry_OnEnter(entry)
-	local button = _G[entry:GetName().."Button"]
-	self:ShowTooltip(button)
-end
-
-
-function BetterInbox:Entry_OnLeave(entry)
-	GameTooltip:Hide()
-	SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
-end
-
-
-function BetterInbox:Entry_OnClick(entry, ...)
-	local button = _G[entry:GetName().."Button"]
-	button:Click(...)
-	self:UpdateInboxScroll()
-end
-
-
 function BetterInbox:InboxFrameItem_OnEnter()
-	self:ShowTooltip(this)
+	BetterInbox:ShowTooltip(this)
 end
 
 
