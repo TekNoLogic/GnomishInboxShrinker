@@ -12,9 +12,6 @@ local ICONSIZE = 17
 
 local BetterInbox = LibStub("AceAddon-3.0"):NewAddon("BetterInbox", "AceEvent-3.0", "AceHook-3.0", "AceTimer-3.0")
 
-local AceGUI = LibStub("AceGUI-3.0")
-local iconpath = "Interface\\AddOns\\BetterInbox\\icons"
-
 local L = LibStub("AceLocale-3.0"):GetLocale("BetterInbox")
 
 
@@ -27,11 +24,17 @@ local function GSC(cash)
 end
 
 
+local function ShortTime(days)
+	if days >= 1 then return math.floor(days).."d" end
+	if (days*24) >= 1 then return string.format("%.1fh", days*24) end
+	return math.floor(days*24*60).."m"
+end
+
+
 function BetterInbox:OnEnable()
 	self:RegisterEvent("MAIL_SHOW")
 	self:RegisterEvent("MAIL_INBOX_UPDATE")
 
-	self:SecureHook("SetSendMailShowing")
 	self:SecureHook("OpenMailFrame_OnHide", "MAIL_INBOX_UPDATE")
 
 	if MailFrame:IsVisible() then self:MAIL_SHOW() end
@@ -43,8 +46,6 @@ function BetterInbox:MAIL_SHOW()
 	for i=1,7 do _G["MailItem"..i]:Hide() end
 	InboxPrevPageButton:Hide()
 	InboxNextPageButton:Hide()
-
-	self:SetSendMailShowing(false) -- fix border textures
 
 	if self.SetupGUI then self:SetupGUI() end
 	self:MAIL_INBOX_UPDATE()
@@ -97,8 +98,25 @@ end
 
 
 function BetterInbox:SetupGUI()
-	-- If we're already fixed up return early
-	if self.scrollframe then return self.scrollframe:Show() end
+	local textures = {MailFrameTopLeft, MailFrameTopRight, MailFrameBotLeft, MailFrameBotRight}
+	local function noop() end
+	local f = CreateFrame("Frame", nil, InboxFrame)
+	f:SetAllPoints()
+	f:SetScript("OnHide", function()
+		for i,frame in pairs(textures) do frame.SetTexture = frame.RealSetTexture end
+		MailFrameTopLeft.SetPoint = MailFrameTopLeft.RealSetPoint
+	end)
+	f:SetScript("OnShow", function()
+		MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
+		MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
+		MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
+		MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
+		MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
+		for i,frame in pairs(textures) do frame.SetTexture, frame.RealSetTexture = noop, frame.SetTexture end
+		MailFrameTopLeft.SetPoint, MailFrameTopLeft.RealSetPoint = noop, MailFrameTopLeft.SetPoint
+	end)
+	if f:IsVisible() then f:GetScript("OnShow")() end
+
 
 	-- Scrolling body
 	local sframe = CreateFrame("ScrollFrame", "BetterInboxScrollFrame", InboxFrame, "FauxScrollFrameTemplate")
@@ -111,6 +129,7 @@ function BetterInbox:SetupGUI()
 
 	local function updateScroll() self:UpdateInboxScroll() end
 	sframe:SetScript("OnVerticalScroll", function(self, offset) FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll) end)
+
 
 	-- textures for scrollbars
 
@@ -131,12 +150,6 @@ function BetterInbox:SetupGUI()
 	t2:SetTexCoord(0.515625, 1,0, 0.421875)
 
 	sframe.t2 = t2
-
-	local function ShortTime(days)
-		if days >= 1 then return math.floor(days).."d" end
-		if (days*24) >= 1 then return string.format("%.1fh", days*24) end
-		return math.floor(days*24*60).."m"
-	end
 
 	local function OnEnter(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -275,15 +288,4 @@ function BetterInbox:SetupGUI()
 		rows[i] = row
 	end
 	self.SetupGUI = nil
-end
-
-
-function BetterInbox:SetSendMailShowing(flag)
-	if flag then return end -- textures set to the Send Mail Textures
-
-	MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
-	MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
-	MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
-	MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
-	MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
 end
