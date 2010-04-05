@@ -7,6 +7,9 @@
 	TakeInboxItem(index, attachIndex)
 --]]
 
+
+local ICONSIZE = 17
+
 local BetterInbox = LibStub("AceAddon-3.0"):NewAddon("BetterInbox", "AceEvent-3.0", "AceHook-3.0", "AceTimer-3.0")
 
 local AceGUI = LibStub("AceGUI-3.0")
@@ -29,7 +32,6 @@ function BetterInbox:OnEnable()
 	self:RegisterEvent("MAIL_INBOX_UPDATE")
 
 	self:SecureHook("SetSendMailShowing")
-	self:SecureHook("InboxFrameItem_OnEnter")
 	self:SecureHook("OpenMailFrame_OnHide", "MAIL_INBOX_UPDATE")
 
 	if MailFrame:IsVisible() then self:MAIL_SHOW() end
@@ -72,9 +74,6 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 	if cash > 0 then txt = txt .. " - ".. GSC(cash) end
 	titletext:SetText(txt)
 
-	if numread < numitems then
-		MiniMapMailFrame:Hide()
-	end
 
 	self:UpdateInboxScroll()
 end
@@ -83,101 +82,17 @@ end
 -- Basically a rip from InboxFrame_Update() by Blizzard.
 local rows = {}
 function BetterInbox:UpdateInboxScroll()
-	if not self.scrollframe then return end
-	local scrollframe = self.scrollframe
-	local nritems = GetInboxNumItems()
-	FauxScrollFrame_Update(scrollframe, nritems, #rows, 45)
-	local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
-	local icon, button, buttonIcon, buttonSlot, subjectText, senderText
+	local offset = FauxScrollFrame_GetOffset(self.scrollframe)
+	local numitems = GetInboxNumItems()
+	FauxScrollFrame_Update(self.scrollframe, numitems, #rows, 45)
 	for i,row in pairs(rows) do
-		local index = i + FauxScrollFrame_GetOffset(scrollframe)
-		expireTime = _G["BetterInboxItem"..i.."ExpireTime"]
-		button = _G["BetterInboxItem"..i.."Button"]
-		senderText = _G["BetterInboxItem"..i.."Sender"]
-		subjectText = _G["BetterInboxItem"..i.."Subject"]
-		buttonIcon = _G["BetterInboxItem"..i.."ButtonIcon"]
-		buttonSlot = _G["BetterInboxItem"..i.."ButtonSlot"]
-		if index <= nritems then
-			button:Show()
-			packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(index)
-
-			if packageIcon and not isGM then
-				icon = packageIcon
-			else
-				icon = stationeryIcon
-			end
-			buttonIcon:SetTexture(icon)
-			subjectText:SetText(subject)
-			senderText:SetText(sender)
-			SetItemButtonCount(button, itemQuantity)
-			button.index = index
-			row.index = index -- fallback
-			button.hasItem = itemCount
-			button.itemCount = itemCount
-
-			if wasRead then
-				subjectText:SetTextColor(0.75,0.75,0.75)
-				senderText:SetTextColor(0.75,0.75,0.75)
-				buttonSlot:SetVertexColor(0.5,0.5,0.5)
-				SetDesaturation(buttonIcon,1)
-			else
-				subjectText:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
-				senderText:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
-				buttonSlot:SetVertexColor(0.5,0.5,0.5)
-				SetDesaturation(buttonIcon,nil)
-			end
-
-			-- Format expiration time
-			if daysLeft >= 1 then
-				daysLeft = GREEN_FONT_COLOR_CODE..format(DAYS_ABBR, floor(daysLeft)).." "..FONT_COLOR_CODE_CLOSE
-			else
-				daysLeft = RED_FONT_COLOR_CODE..SecondsToTime(floor(daysLeft * 24 * 60 * 60))..FONT_COLOR_CODE_CLOSE
-			end
-			expireTime:SetText(daysLeft)
-
-			-- Set expiration time tooltip
-			if InboxItemCanDelete(index) then
-				expireTime.tooltip = TIME_UNTIL_DELETED
-			else
-				expireTime.tooltip = TIME_UNTIL_RETURNED
-			end
-			expireTime:Show()
-
-			-- Is a C.O.D. package
-			if CODAmount > 0 then
-				_G["BetterInboxItem"..i.."ButtonCOD"]:Show()
-				button.cod = CODAmount
-			else
-				_G["BetterInboxItem"..i.."ButtonCOD"]:Hide()
-				button.cod = nil
-			end
-
-			-- Contains money
-			if money > 0 then
-				button.money = money
-			else
-				button.money = nil
-			end
-
-			-- Set highlight
-			if InboxFrame.openMailID == index then
-				button:SetChecked(1)
-				SetPortraitToTexture("OpenMailFrameIcon", stationeryIcon)
-			else
-				button:SetChecked(nil)
-			end
-			row:Show()
-		else
-			row:Hide()
-			button:Hide()
-			senderText:SetText("")
-			subjectText:SetText("")
-			expireTime:Hide()
-		end
+		local index = i + offset
+		if index <= numitems then row:Update(index)
+		else row:Hide() end
 	end
 	-- always show the scrollframe borders, looks better that way imho
-	scrollframe.t1:Show()
-	scrollframe.t2:Show()
+	self.scrollframe.t1:Show()
+	self.scrollframe.t2:Show()
 end
 
 
@@ -217,8 +132,43 @@ function BetterInbox:SetupGUI()
 
 	sframe.t2 = t2
 
+	local function ShortTime(days)
+		if days >= 1 then return math.floor(days).."d" end
+		if (days*24) >= 1 then return string.format("%.1fh", days*24) end
+		return math.floor(days*24*60).."m"
+	end
 
-	local function OnEnter(self) BetterInbox:ShowTooltip(self.button) end
+	local function OnEnter(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+
+		if self.hasItem then
+			if self.itemCount == 1 then GameTooltip:SetInboxItem(self.index)
+			else
+				GameTooltip:AddLine(MAIL_MULTIPLE_ITEMS.." ("..self.itemCount..")")
+				GameTooltip:AddLine(" ")
+				for j=1, ATTACHMENTS_MAX_RECEIVE do
+					local name, itemTexture, count, quality, canUse = GetInboxItem(self.index,j)
+					if name then
+						if count > 1 then
+							GameTooltip:AddLine(GetInboxItemLink(self.index,j) .. "x" .. count)
+						else
+							GameTooltip:AddLine(GetInboxItemLink(self.index,j))
+						end
+					end
+				end
+			end
+		end
+
+		if self.cod then
+			if self.hasItem then GameTooltip:AddLine(" ") end
+			GameTooltip:AddLine(COD_AMOUNT, "", 1, 1, 1)
+			SetTooltipMoney(GameTooltip, self.cod)
+			if self.cod > GetMoney() then SetMoneyFrameColor("GameTooltipMoneyFrame", RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
+			else SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b) end
+		end
+
+		GameTooltip:Show()
+	end
 
 	local function OnLeave()
 		GameTooltip:Hide()
@@ -226,29 +176,102 @@ function BetterInbox:SetupGUI()
 	end
 
 	local function OnClick(self, ...)
-		self.button:Click(...)
+		if IsModifiedClick("MAILAUTOLOOTTOGGLE") and select(6, GetInboxHeaderInfo(self.index)) <= 0 then AutoLootMailItem(self.index) end
+		if self:GetChecked() then
+			InboxFrame.openMailID = self.index
+			OpenMailFrame.updateButtonPositions = true
+			OpenMail_Update()
+			ShowUIPanel(OpenMailFrame)
+			PlaySound("igSpellBookOpen")
+		else
+			InboxFrame.openMailID = 0
+			HideUIPanel(OpenMailFrame)
+		end
 		BetterInbox:UpdateInboxScroll()
 	end
 
-	for i=1,8 do
-		local row = CreateFrame("CheckButton", "BetterInboxItem"..i, InboxFrame, "MailItemTemplate")
-		row.button = _G["BetterInboxItem"..i.."Button"]
-		row:SetHighlightTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight", "ADD")
-		row:GetHighlightTexture():SetTexCoord(0,1,0,0.5)
+	local function Update(self, i)
+		local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
+
+		self.icon:SetTexture((not isGM and packageIcon) or stationeryIcon)
+		self.sender:SetText(sender:gsub("Auction House", "AH"))
+		self.subject:SetText(subject:gsub("Auction successful", "Sold"):gsub("Auction expired", "Failed")) --..(money > 0 and (" ("..GSC(money).."|r)") or ""))
+		self.money:SetText(money > 0 and GSC(money) or "")
+
+		-- Format expiration time
+		self.expire:SetText((daysLeft >= 1 and "|cff00ff00" or "|cffff0000").. ShortTime(daysLeft).. (InboxItemCanDelete(index) and " |cffff0000d" or " |cffffff00r"))
+
+		self.index = i
+
+		self.hasItem = itemCount
+		self.itemCount = itemCount
+
+		if InboxFrame.openMailID == i then
+			self:SetChecked(true)
+			SetPortraitToTexture("OpenMailFrameIcon", stationeryIcon)
+		else
+			self:SetChecked(false)
+		end
+
+		if wasRead then
+			self.subject:SetTextColor(0.75,0.75,0.75)
+			self.sender:SetTextColor(0.75,0.75,0.75)
+			SetDesaturation(self.icon, 1)
+		else
+			self.subject:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+			self.sender:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+			SetDesaturation(self.icon, nil)
+		end
+
+		if GameTooltip:IsOwned(self) then OnEnter(self) end
+		self:Show()
+	end
+
+
+	for i=1,17 do
+		local row = CreateFrame("CheckButton", nil, InboxFrame)
+		row:SetWidth(305)
+		row:SetHeight(20)
+
+		row:SetHighlightTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight")
+		row:GetHighlightTexture():SetTexCoord(0, 1, 0, 0.578125)
+
+		row:SetCheckedTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight")
+		row:GetCheckedTexture():SetTexCoord(0, 1, 0, 0.578125)
 
 		if i == 1 then row:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 22, -75)
 		else row:SetPoint("TOPLEFT", rows[i-1], "BOTTOMLEFT") end
 
-	--[[ failed attempt to fix bleed into scrollbar
-		local tex1, tex2 = row:GetRegions()
-		tex1:SetWidth(233)
-		tex1:SetTexCoord(0.1640625, 233/266, 0, 0.75)
-	--]]
-
-		row:RegisterForClicks("LeftButtonUp","RightButtonUp")
+		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		row:SetScript("OnClick", OnClick)
 		row:SetScript("OnEnter", OnEnter)
 		row:SetScript("OnLeave", OnLeave)
+		row.Update = Update
+
+		local icon = row:CreateTexture(nil, "ARTWORK")
+		icon:SetWidth(ICONSIZE)
+		icon:SetHeight(ICONSIZE)
+		icon:SetPoint("LEFT", 4, 0)
+		row.icon = icon
+
+		local sender = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		sender:SetPoint("LEFT", icon, "RIGHT", 6, 0)
+		row.sender = sender
+
+		local expire = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmallRight")
+		expire:SetPoint("RIGHT", -4, 0)
+		row.expire = expire
+
+		local money = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		money:SetPoint("RIGHT", expire, "LEFT", -3, 0)
+		row.money = money
+
+		local subject = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		subject:SetPoint("LEFT", sender, "RIGHT", 6, 0)
+		subject:SetPoint("RIGHT", money, "LEFT", -6, 0)
+		subject:SetJustifyH("LEFT")
+		row.subject = subject
+
 		rows[i] = row
 	end
 	self.SetupGUI = nil
@@ -263,50 +286,4 @@ function BetterInbox:SetSendMailShowing(flag)
 	MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
 	MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
 	MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
-end
-
-
-function BetterInbox:InboxFrameItem_OnEnter()
-	BetterInbox:ShowTooltip(this)
-end
-
-
--- Partial reimplementation of blizzard
-function BetterInbox:ShowTooltip(this)
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	if this.hasItem then
-		if this.itemCount == 1 then
-			GameTooltip:SetInboxItem(this.index)
-		else
-			GameTooltip:AddLine(MAIL_MULTIPLE_ITEMS.." ("..this.itemCount..")")
-			GameTooltip:AddLine(" ")
-			local name, itemTexture, count, quality, canUse
-			for j=1, ATTACHMENTS_MAX_RECEIVE do
-				name, itemTexture, count, quality, canUse = GetInboxItem(this.index,j)
-				if name then
-					if count > 1 then
-						GameTooltip:AddLine(GetInboxItemLink(this.index,j) .. "x" .. count)
-					else
-						GameTooltip:AddLine(GetInboxItemLink(this.index,j))
-					end
-				end
-			end
-		end
-	end
-	if this.money then
-		if this.hasItem then GameTooltip:AddLine(" ") end
-		GameTooltip:AddLine(ENCLOSED_MONEY, "", 1, 1, 1)
-		SetTooltipMoney(GameTooltip, this.money)
-		SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
-	elseif this.cod then
-		if this.hasItem then GameTooltip:AddLine(" ") end
-		GameTooltip:AddLine(COD_AMOUNT, "", 1, 1, 1)
-		SetTooltipMoney(GameTooltip, this.cod)
-		if this.cod > GetMoney() then
-			SetMoneyFrameColor("GameTooltipMoneyFrame", RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
-		else
-			SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
-		end
-	end
-	GameTooltip:Show()
 end
