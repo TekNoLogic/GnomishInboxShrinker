@@ -11,10 +11,6 @@ local BetterInbox = LibStub("AceAddon-3.0"):NewAddon("BetterInbox", "AceEvent-3.
 
 local AceGUI = LibStub("AceGUI-3.0")
 local iconpath = "Interface\\AddOns\\BetterInbox\\icons"
-local mIndex = 0
-local aIndex = -1
-local inventoryFull = nil
-local checked = {}
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BetterInbox")
 
@@ -28,37 +24,8 @@ local function GSC(cash)
 end
 
 
-local function MoneyString(money)
-	local gold = abs(money / 10000)
-	local silver = abs(mod(money / 100, 100))
-	local copper = abs(mod(money, 100))
-	if money >= 10000 then
-		return string.format("|cffffffff%d|r|cffffd700g|r |cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", gold, silver, copper)
-	elseif money >= 100 then
-		return string.format("|cffffffff%d|r|cffc7c7cfs|r |cffffffff%d|r|cffeda55fc|r", silver, copper)
-	else
-		return string.format("|cffffffff%d|r|cffeda55fc|r", copper)
-	end
-end
-
-local function FullMoneyString(money)
-	local gold = abs(money / 10000)
-	local silver = abs(mod(money / 100, 100))
-	local copper = abs(mod(money, 100))
-	if money >= 10000 then
-		return string.format("|cffffffff%d|r|cffffd700|r |T"..iconpath.."\\UI-GoldIcon::|t |cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", gold, silver, copper)
-	elseif money >= 100 then
-		return string.format("|cffffffff%d|r|cffc7c7cf|r |T"..iconpath.."\\UI-SilverIcon::|t |cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", silver, copper)
-	else
-		return string.format("|cffffffff%d|r|cffeda55f|r |T"..iconpath.."\\UI-CopperIcon::|t", copper)
-	end
-end
-
-
 function BetterInbox:OnEnable()
 	self:RegisterEvent("MAIL_SHOW")
-	self:RegisterEvent("MAIL_CLOSED")
-	self:RegisterEvent("PLAYER_LEAVING_WORLD", "MAIL_CLOSED")
 	self:RegisterEvent("MAIL_INBOX_UPDATE")
 
 	self:SecureHook("SetSendMailShowing")
@@ -70,34 +37,14 @@ end
 
 
 function BetterInbox:MAIL_SHOW()
-	self:RegisterEvent("UI_ERROR_MESSAGE")
 	self:SetupGUI()
 	self:MAIL_INBOX_UPDATE()
 end
 
-function BetterInbox:MAIL_CLOSED()
-	-- abort any openall actions
-	aIndex = -1
-	mIndex = 0
-	inventoryFull = nil
-	for k, v in pairs(checked) do
-		checked[k] = nil
-	end
-	self:UnregisterEvent("UI_ERROR_MESSAGE")
-end
-
-
-function BetterInbox:UI_ERROR_MESSAGE(event, msg)
-	if msg == ERR_INV_FULL then inventoryFull = true end
-end
-
-function BetterInbox:MAIL_INBOX_UPDATE()
-	self:UpdateInboxSummary()
-	self:UpdateInboxScroll()
-end
 
 local titletext = InboxTitleText
-function BetterInbox:UpdateInboxSummary()
+function BetterInbox:MAIL_INBOX_UPDATE()
+	-- Update title
 	local numitems = GetInboxNumItems()
 	local numread, cash, totalitems = 0, 0, 0
 	for i=1,numitems do
@@ -121,6 +68,8 @@ function BetterInbox:UpdateInboxSummary()
 	if numread < numitems then
 		MiniMapMailFrame:Hide()
 	end
+
+	self:UpdateInboxScroll()
 end
 
 
@@ -278,12 +227,6 @@ function BetterInbox:SetupGUI()
 	sframe.t2 = t2
 
 	-- ScrollFrameEntries
-
-	local function CheckBoxChanged(widget, callback, value)
-		if widget.entry.index then
-			checked[widget.entry.index] = value
-		end
-	end
 
 	local entries = {}
 	local kids
