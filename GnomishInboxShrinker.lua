@@ -209,7 +209,7 @@ function BetterInbox:SetupGUI()
 		self.icon:SetTexture((not isGM and packageIcon) or stationeryIcon)
 		self.sender:SetText(sender:gsub("Auction House", "AH"))
 		self.subject:SetText(subject:gsub("Auction successful", "Sold"):gsub("Auction expired", "Failed")) --..(money > 0 and (" ("..GSC(money).."|r)") or ""))
-		self.money:SetText(money > 0 and GSC(money) or "")
+		self.money:SetText(money > 0 and GSC(money) or CODAmount > 0 and ("|cffff0000COD (".. GSC(CODAmount).. "|cffff0000)") or "")
 
 		-- Format expiration time
 		self.expire:SetText((daysLeft >= 1 and "|cff00ff00" or "|cffff0000").. ShortTime(daysLeft).. (InboxItemCanDelete(index) and " |cffff0000d" or " |cffffff00r"))
