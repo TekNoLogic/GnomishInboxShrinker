@@ -212,7 +212,7 @@ function BetterInbox:SetupGUI()
 		self.money:SetText(money > 0 and GSC(money) or CODAmount > 0 and ("|cffff0000COD (".. GSC(CODAmount).. "|cffff0000)") or "")
 
 		-- Format expiration time
-		self.expire:SetText((daysLeft >= 1 and "|cff00ff00" or "|cffff0000").. ShortTime(daysLeft).. (InboxItemCanDelete(index) and " |cffff0000d" or " |cffffff00r"))
+		self.expire:SetText((daysLeft >= 1 and "|cff00ff00" or "|cffff0000").. ShortTime(daysLeft).. (InboxItemCanDelete(i) and " |cffff0000d" or " |cffffff00r"))
 
 		self.index = i
 
