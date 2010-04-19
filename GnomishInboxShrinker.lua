@@ -41,6 +41,7 @@ function BetterInbox:OnEnable()
 end
 
 
+local justshown
 function BetterInbox:MAIL_SHOW()
 	-- Hide Blizzard Elements we're replacing
 	for i=1,7 do _G["MailItem"..i]:Hide() end
@@ -48,15 +49,17 @@ function BetterInbox:MAIL_SHOW()
 	InboxNextPageButton:Hide()
 
 	if self.SetupGUI then self:SetupGUI() end
+	justshown = true
 	self:MAIL_INBOX_UPDATE()
+	justshown = false
 end
 
 
 local titletext = InboxTitleText
 function BetterInbox:MAIL_INBOX_UPDATE()
 	-- Update title
-	local numitems = GetInboxNumItems()
-	local numread, cash, totalitems = 0, 0, 0
+	local numitems, totalitems = GetInboxNumItems()
+	local numread, cash, attachments = 0, 0, 0
 	for i=1,numitems do
 		local _, _, _, _, money, _, _, itemCount, wasRead = GetInboxHeaderInfo(i)
 		if wasRead then numread = numread + 1 end
@@ -64,19 +67,21 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 		if (itemCount or 0) > 0 then
 			for j=1,ATTACHMENTS_MAX_RECEIVE do
 				local name, itemTexture, count, quality, canUse = GetInboxItem(i,j)
-				if name then totalitems = totalitems + count end
+				if name then attachments = attachments + count end
 			end
 		end
 	end
 
 	local txt = INBOX
-	if numitems > 0 then txt = txt .. " (".. numitems.. ")" end
-	if totalitems > 0 then txt = txt .. " - ".. totalitems.. " items" end
+	if numitems > 0 and totalitems > numitems then txt = txt .. " (".. numitems.. "/".. totalitems.. ")"
+	elseif numitems > 0 then txt = txt .. " (".. numitems.. ")" end
+	if attachments > 0 then txt = txt .. " - ".. attachments.. " items" end
 	if cash > 0 then txt = txt .. " - ".. GSC(cash) end
 	titletext:SetText(txt)
 
-
 	self:UpdateInboxScroll()
+
+	if not justshown and (numitems + totalitems) == 0 then MiniMapMailFrame:Hide() else MiniMapMailFrame:Show() end
 end
 
 
