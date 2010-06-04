@@ -73,7 +73,7 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 	end
 
 	local txt = INBOX
-	if numitems > 0 and totalitems > numitems then txt = txt .. " (".. numitems.. "/".. totalitems.. ")"
+	if totalitems > numitems then txt = txt .. " (".. numitems.. "/".. totalitems.. ")"
 	elseif numitems > 0 then txt = txt .. " (".. numitems.. ")" end
 	if attachments > 0 then txt = txt .. " - ".. attachments.. " items" end
 	if cash > 0 then txt = txt .. " - ".. GSC(cash) end
