@@ -212,7 +212,7 @@ function BetterInbox:SetupGUI()
 		local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
 
 		self.icon:SetTexture((not isGM and packageIcon) or stationeryIcon)
-		self.sender:SetText(sender:gsub("Auction House", "AH"))
+		self.sender:SetText((sender or "<unknown>"):gsub("Auction House", "AH"))
 		self.subject:SetText(subject:gsub("Auction successful", "Sold"):gsub("Auction expired", "Failed"):gsub("Auction won", "Won"))
 		self.money:SetText(money > 0 and GSC(money) or CODAmount > 0 and ("|cffff0000COD (".. GSC(CODAmount).. "|cffff0000)") or "")
 
