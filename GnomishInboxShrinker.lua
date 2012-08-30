@@ -7,6 +7,12 @@
 	TakeInboxItem(index, attachIndex)
 --]]
 
+-- local function GetInboxNumItems() return 50 end
+-- local function GetInboxHeaderInfo(index)
+-- 	-- packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
+-- 	return nil, "Interface\\Icons\\INV_Scroll_03", "Alliance Auction House", "Auction successful: Rawr n stuff", 56789, 0, 29.123, nil,nil,nil, 1, nil,nil,nil
+-- end
+
 
 local ICONSIZE = 17
 
@@ -18,8 +24,10 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BetterInbox")
 local function GSC(cash)
 	if not cash then return end
 	local g, s, c = floor(cash/10000), floor((cash/100)%100), cash%100
-	if g > 0 then return string.format("|cffffd700%d.|cffc7c7cf%02d.|cffeda55f%02d", g, s, c)
-	elseif s > 0 then return string.format("|cffc7c7cf%d.|cffeda55f%02d", s, c)
+	if g > 0 then
+		return string.format("|cffffd700%d.|cffc7c7cf%02d.|cffeda55f%02d", g, s, c)
+	elseif s > 0 then
+		return string.format("|cffc7c7cf%d.|cffeda55f%02d", s, c)
 	else return string.format("|cffc7c7cf%d", c) end
 end
 
@@ -28,6 +36,16 @@ local function ShortTime(days)
 	if days >= 1 then return math.floor(days).."d" end
 	if (days*24) >= 1 then return string.format("%.1fh", days*24) end
 	return math.floor(days*24*60).."m"
+end
+
+
+local function SetMoneyColor(color)
+	SetMoneyFrameColor("GameTooltipMoneyFrame", color.r, color.g, color.b)
+end
+
+
+local function ExpandColor(c)
+	return c.r, c.g, c.b
 end
 
 
@@ -73,7 +91,8 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 	end
 
 	local txt = INBOX
-	if totalitems > numitems then txt = txt .. " (".. numitems.. "/".. totalitems.. ")"
+	if totalitems > numitems then
+		txt = txt .. " (".. numitems.. "/".. totalitems.. ")"
 	elseif numitems > 0 then txt = txt .. " (".. numitems.. ")" end
 	if attachments > 0 then txt = txt .. " - ".. attachments.. " items" end
 	if cash > 0 then txt = txt .. " - ".. GSC(cash) end
@@ -81,7 +100,9 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 
 	self:UpdateInboxScroll()
 
-	if not justshown and (numitems + totalitems) == 0 then MiniMapMailFrame:Hide() else MiniMapMailFrame:Show() end
+	if not justshown and (numitems + totalitems) == 0 then
+		MiniMapMailFrame:Hide() else MiniMapMailFrame:Show()
+	end
 end
 
 
@@ -103,22 +124,22 @@ end
 
 
 function BetterInbox:SetupGUI()
-	local textures = {MailFrameTopLeft, MailFrameTopRight, MailFrameBotLeft, MailFrameBotRight}
+	-- local textures = {MailFrameTopLeft, MailFrameTopRight, MailFrameBotLeft, MailFrameBotRight}
 	local function noop() end
 	local f = CreateFrame("Frame", nil, InboxFrame)
 	f:SetAllPoints()
 	f:SetScript("OnHide", function()
-		for i,frame in pairs(textures) do frame.SetTexture = frame.RealSetTexture end
-		MailFrameTopLeft.SetPoint = MailFrameTopLeft.RealSetPoint
+		-- for i,frame in pairs(textures) do frame.SetTexture = frame.RealSetTexture end
+		-- MailFrameTopLeft.SetPoint = MailFrameTopLeft.RealSetPoint
 	end)
 	f:SetScript("OnShow", function()
-		MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
-		MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
-		MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
-		MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
-		MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
-		for i,frame in pairs(textures) do frame.SetTexture, frame.RealSetTexture = noop, frame.SetTexture end
-		MailFrameTopLeft.SetPoint, MailFrameTopLeft.RealSetPoint = noop, MailFrameTopLeft.SetPoint
+		-- MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
+		-- MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
+		-- MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
+		-- MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
+		-- MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
+		-- for i,frame in pairs(textures) do frame.SetTexture, frame.RealSetTexture = noop, frame.SetTexture end
+		-- MailFrameTopLeft.SetPoint, MailFrameTopLeft.RealSetPoint = noop, MailFrameTopLeft.SetPoint
 	end)
 	if f:IsVisible() then f:GetScript("OnShow")() end
 
@@ -128,12 +149,13 @@ function BetterInbox:SetupGUI()
 	self.scrollframe = sframe
 	sframe:SetParent(InboxFrame)
 	sframe:SetWidth(292)
-	-- sframe:SetHeight(309)
 	sframe:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 28, -77)
 	sframe:SetPoint("BOTTOMLEFT", InboxFrame, "BOTTOMLEFT", 28, 84)
 
 	local function updateScroll() self:UpdateInboxScroll() end
-	sframe:SetScript("OnVerticalScroll", function(self, offset) FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll) end)
+	sframe:SetScript("OnVerticalScroll", function(self, offset)
+		FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll)
+	end)
 
 
 	-- textures for scrollbars
@@ -165,10 +187,10 @@ function BetterInbox:SetupGUI()
 				GameTooltip:AddLine(MAIL_MULTIPLE_ITEMS.." ("..self.itemCount..")")
 				GameTooltip:AddLine(" ")
 				for j=1, ATTACHMENTS_MAX_RECEIVE do
-					local name, itemTexture, count, quality, canUse = GetInboxItem(self.index,j)
+					local name, itemTexture, count = GetInboxItem(self.index,j)
 					if name then
 						if count > 1 then
-							GameTooltip:AddLine(GetInboxItemLink(self.index,j) .. "x" .. count)
+							GameTooltip:AddLine(GetInboxItemLink(self.index,j).. "x".. count)
 						else
 							GameTooltip:AddLine(GetInboxItemLink(self.index,j))
 						end
@@ -181,8 +203,8 @@ function BetterInbox:SetupGUI()
 			if self.hasItem then GameTooltip:AddLine(" ") end
 			GameTooltip:AddLine(COD_AMOUNT, "", 1, 1, 1)
 			SetTooltipMoney(GameTooltip, self.cod)
-			if self.cod > GetMoney() then SetMoneyFrameColor("GameTooltipMoneyFrame", RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
-			else SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b) end
+			if self.cod > GetMoney() then SetMoneyColor(RED_FONT_COLOR)
+			else SetMoneyColor(HIGHLIGHT_FONT_COLOR) end
 		end
 
 		GameTooltip:Show()
@@ -190,11 +212,15 @@ function BetterInbox:SetupGUI()
 
 	local function OnLeave()
 		GameTooltip:Hide()
-		SetMoneyFrameColor("GameTooltipMoneyFrame", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+		SetMoneyColor(HIGHLIGHT_FONT_COLOR)
 	end
 
 	local function OnClick(self, ...)
-		if IsModifiedClick("MAILAUTOLOOTTOGGLE") and select(6, GetInboxHeaderInfo(self.index)) <= 0 then AutoLootMailItem(self.index) end
+		if IsModifiedClick("MAILAUTOLOOTTOGGLE")
+			and select(6, GetInboxHeaderInfo(self.index)) <= 0 then
+			AutoLootMailItem(self.index)
+		end
+
 		if self:GetChecked() then
 			InboxFrame.openMailID = self.index
 			OpenMailFrame.updateButtonPositions = true
@@ -209,20 +235,36 @@ function BetterInbox:SetupGUI()
 	end
 
 	local function Update(self, i)
-		local packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity = GetInboxHeaderInfo(i)
+		local packageIcon, stationeryIcon, sender, subject, money, CODAmount,
+			daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM,
+			itemQuantity = GetInboxHeaderInfo(i)
 
+		subject = subject:gsub("Auction successful", "Sold")
+		subject = subject:gsub("Auction expired", "Failed")
+		subject = subject:gsub("Auction won", "Won")
+
+		self.subject:SetText(subject)
 		self.icon:SetTexture((not isGM and packageIcon) or stationeryIcon)
 		self.sender:SetText((sender or "<unknown>"):gsub("Auction House", "AH"))
-		self.subject:SetText(subject:gsub("Auction successful", "Sold"):gsub("Auction expired", "Failed"):gsub("Auction won", "Won"))
-		self.money:SetText(money > 0 and GSC(money) or CODAmount > 0 and ("|cffff0000COD (".. GSC(CODAmount).. "|cffff0000)") or "")
+		self.money:SetText(
+			money > 0 and GSC(money)
+			or CODAmount > 0 and ("|cffff0000COD (".. GSC(CODAmount).. "|cffff0000)")
+			or ""
+		)
 
 		-- Format expiration time
-		self.expire:SetText((daysLeft >= 1 and "|cff00ff00" or "|cffff0000").. ShortTime(daysLeft).. (InboxItemCanDelete(i) and " |cffff0000d" or " |cffffff00r"))
+		self.expire:SetText(
+			(daysLeft >= 1 and "|cff00ff00" or "|cffff0000")..
+			ShortTime(daysLeft)..
+			(InboxItemCanDelete(i) and " |cffff0000d" or " |cffffff00r")
+		)
 
 		self.index = i
 
 		self.hasItem = itemCount
 		self.itemCount = itemCount
+
+		-- SetItemButtonCount(button, itemQuantity)
 
 		if InboxFrame.openMailID == i then
 			self:SetChecked(true)
@@ -236,8 +278,8 @@ function BetterInbox:SetupGUI()
 			self.sender:SetTextColor(0.75,0.75,0.75)
 			SetDesaturation(self.icon, 1)
 		else
-			self.subject:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
-			self.sender:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+			self.subject:SetTextColor(ExpandColor(NORMAL_FONT_COLOR))
+			self.sender:SetTextColor(ExpandColor(HIGHLIGHT_FONT_COLOR))
 			SetDesaturation(self.icon, nil)
 		end
 
@@ -245,6 +287,10 @@ function BetterInbox:SetupGUI()
 		self:Show()
 	end
 
+
+	local function cfs(parent, font)
+		return parent:CreateFontString(nil, "BACKGROUND", font)
+	end
 
 	for i=1,17 do
 		local row = CreateFrame("CheckButton", nil, InboxFrame)
@@ -272,19 +318,19 @@ function BetterInbox:SetupGUI()
 		icon:SetPoint("LEFT", 4, 0)
 		row.icon = icon
 
-		local sender = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		local sender = cfs(row, "GameFontHighlightSmall")
 		sender:SetPoint("LEFT", icon, "RIGHT", 6, 0)
 		row.sender = sender
 
-		local expire = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmallRight")
+		local expire = cfs(row, "GameFontHighlightSmallRight")
 		expire:SetPoint("RIGHT", -4, 0)
 		row.expire = expire
 
-		local money = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		local money = cfs(row, "GameFontHighlightSmall")
 		money:SetPoint("RIGHT", expire, "LEFT", -3, 0)
 		row.money = money
 
-		local subject = row:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		local subject = cfs(row, "GameFontHighlightSmall")
 		subject:SetPoint("LEFT", sender, "RIGHT", 6, 0)
 		subject:SetPoint("RIGHT", money, "LEFT", -6, 0)
 		subject:SetJustifyH("LEFT")
