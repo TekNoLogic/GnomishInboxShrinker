@@ -3,8 +3,8 @@
 ## Author: Ammo
 ## Title: Gnomish Inbox Shrinker
 ## Notes: A simple, scrolling inbox
-
 ## X-Credits: Ammo's BetterInbox
+## X-Icon: Interface\Icons\INV_Letter_06
 
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Mailbox: true
