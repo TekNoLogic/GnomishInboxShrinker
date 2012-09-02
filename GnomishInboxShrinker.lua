@@ -7,14 +7,23 @@
 	TakeInboxItem(index, attachIndex)
 --]]
 
--- local function GetInboxNumItems() return 50 end
+-- local function GetInboxNumItems() return 50, 200 end
+-- local orig_GetInboxHeaderInfo = GetInboxHeaderInfo
+-- local function GetInboxHeaderInfo(index)
+-- 	return orig_GetInboxHeaderInfo(index % 2 + 1)
+-- end
+-- local function GetInboxHeaderInfo(index)
+-- 	return orig_GetInboxHeaderInfo(1)
+-- end
 -- local function GetInboxHeaderInfo(index)
 -- 	-- packageIcon, stationeryIcon, sender, subject, money, CODAmount, daysLeft, itemCount, wasRead, wasReturned, textCreated, canReply, isGM, itemQuantity
 -- 	return nil, "Interface\\Icons\\INV_Scroll_03", "Alliance Auction House", "Auction successful: Rawr n stuff", 56789, 0, 29.123, nil,nil,nil, 1, nil,nil,nil
 -- end
 
 
-local ICONSIZE = 17
+local myname, ns = ...
+
+local ICONSIZE, NUMROWS = 17, 17
 
 local BetterInbox = LibStub("AceAddon-3.0"):NewAddon("BetterInbox", "AceEvent-3.0", "AceHook-3.0", "AceTimer-3.0")
 
@@ -106,77 +115,42 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 end
 
 
--- Basically a rip from InboxFrame_Update() by Blizzard.
 local rows = {}
 function BetterInbox:UpdateInboxScroll()
-	local offset = FauxScrollFrame_GetOffset(self.scrollframe)
 	local numitems = GetInboxNumItems()
-	FauxScrollFrame_Update(self.scrollframe, numitems, #rows, 45)
+	local offset = self.scroll:GetValue()
+
+	self.scroll:SetMinMaxValues(0, math.max(0, numitems-NUMROWS))
+
 	for i,row in pairs(rows) do
 		local index = i + offset
 		if index <= numitems then row:Update(index)
 		else row:Hide() end
 	end
-	-- always show the scrollframe borders, looks better that way imho
-	self.scrollframe.t1:Show()
-	self.scrollframe.t2:Show()
 end
 
 
 function BetterInbox:SetupGUI()
-	-- local textures = {MailFrameTopLeft, MailFrameTopRight, MailFrameBotLeft, MailFrameBotRight}
-	local function noop() end
 	local f = CreateFrame("Frame", nil, InboxFrame)
-	f:SetAllPoints()
-	f:SetScript("OnHide", function()
-		-- for i,frame in pairs(textures) do frame.SetTexture = frame.RealSetTexture end
-		-- MailFrameTopLeft.SetPoint = MailFrameTopLeft.RealSetPoint
-	end)
-	f:SetScript("OnShow", function()
-		-- MailFrameTopLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopLeft")
-		-- MailFrameTopRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-TopRight")
-		-- MailFrameBotLeft:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomLeft")
-		-- MailFrameBotRight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-General-BottomRight")
-		-- MailFrameTopLeft:SetPoint("TOPLEFT", "MailFrame", "TOPLEFT", 2, -1)
-		-- for i,frame in pairs(textures) do frame.SetTexture, frame.RealSetTexture = noop, frame.SetTexture end
-		-- MailFrameTopLeft.SetPoint, MailFrameTopLeft.RealSetPoint = noop, MailFrameTopLeft.SetPoint
-	end)
-	if f:IsVisible() then f:GetScript("OnShow")() end
+	f:SetPoint("TOPLEFT", 7, -61)
+	f:SetPoint("BOTTOMRIGHT", -55, 94)
 
 
-	-- Scrolling body
-	local sframe = CreateFrame("ScrollFrame", "BetterInboxScrollFrame", InboxFrame, "FauxScrollFrameTemplate")
-	self.scrollframe = sframe
-	sframe:SetParent(InboxFrame)
-	sframe:SetWidth(292)
-	sframe:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 28, -77)
-	sframe:SetPoint("BOTTOMLEFT", InboxFrame, "BOTTOMLEFT", 28, 84)
+	local bg = InboxFrame:GetRegions()
+	bg:Hide()
 
-	local function updateScroll() self:UpdateInboxScroll() end
-	sframe:SetScript("OnVerticalScroll", function(self, offset)
-		FauxScrollFrame_OnVerticalScroll(self, offset, 45, updateScroll)
+
+	local scroll = ns.tekScrollBar(f, 2, 9)
+	self.scroll = scroll
+	function scroll.OnValueChanged(self, value)
+		BetterInbox:UpdateInboxScroll()
+	end
+
+	f:EnableMouseWheel(true)
+	f:SetScript("OnMouseWheel", function(self, val)
+		scroll:SetValue(scroll:GetValue() - val*3)
 	end)
 
-
-	-- textures for scrollbars
-
-	local t1 = InboxFrame:CreateTexture(nil,"BACKGROUND")
-	t1:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-ScrollBar")
-	t1:SetWidth(30)
-	t1:SetHeight(256)
-	t1:SetPoint("TOPLEFT", sframe, "TOPRIGHT", -1, 5)
-	t1:SetTexCoord(0, 0.484375, 0, 1)
-
-	sframe.t1 = t1
-
-	local t2 = InboxFrame:CreateTexture(nil,"BACKGROUND")
-	t2:SetTexture("Interface\\AddOns\\BetterInbox\\images\\BetterInbox-ScrollBar")
-	t2:SetWidth(30)
-	t2:SetHeight(107)
-	t2:SetPoint("BOTTOMLEFT", sframe, "BOTTOMRIGHT", -1, -4)
-	t2:SetTexCoord(0.515625, 1,0, 0.421875)
-
-	sframe.t2 = t2
 
 	local function OnEnter(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -292,9 +266,8 @@ function BetterInbox:SetupGUI()
 		return parent:CreateFontString(nil, "BACKGROUND", font)
 	end
 
-	for i=1,17 do
-		local row = CreateFrame("CheckButton", nil, InboxFrame)
-		row:SetWidth(305)
+	for i=1,NUMROWS do
+		local row = CreateFrame("CheckButton", nil, f)
 		row:SetHeight(20)
 
 		row:SetHighlightTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight")
@@ -303,8 +276,9 @@ function BetterInbox:SetupGUI()
 		row:SetCheckedTexture("Interface\\HelpFrame\\HelpFrameButton-Highlight")
 		row:GetCheckedTexture():SetTexCoord(0, 1, 0, 0.578125)
 
-		if i == 1 then row:SetPoint("TOPLEFT", InboxFrame, "TOPLEFT", 22, -75)
+		if i == 1 then row:SetPoint("TOPLEFT")
 		else row:SetPoint("TOPLEFT", rows[i-1], "BOTTOMLEFT") end
+		row:SetPoint("RIGHT", scroll, "LEFT", -3, 0)
 
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		row:SetScript("OnClick", OnClick)
@@ -338,5 +312,9 @@ function BetterInbox:SetupGUI()
 
 		rows[i] = row
 	end
+
+	scroll:SetMinMaxValues(0, GetInboxNumItems())
+	scroll:SetValue(0)
+
 	self.SetupGUI = nil
 end
