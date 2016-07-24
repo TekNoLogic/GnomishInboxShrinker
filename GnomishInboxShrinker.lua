@@ -93,7 +93,7 @@ function BetterInbox:MAIL_INBOX_UPDATE()
 		cash = cash + money
 		if (itemCount or 0) > 0 then
 			for j=1,ATTACHMENTS_MAX_RECEIVE do
-				local name, itemTexture, count, quality, canUse = GetInboxItem(i,j)
+				local name, itemID, itemTexture, count, quality, canUse = GetInboxItem(i,j)
 				if name then attachments = attachments + count end
 			end
 		end
@@ -161,7 +161,7 @@ function BetterInbox:SetupGUI()
 				GameTooltip:AddLine(MAIL_MULTIPLE_ITEMS.." ("..self.itemCount..")")
 				GameTooltip:AddLine(" ")
 				for j=1, ATTACHMENTS_MAX_RECEIVE do
-					local name, itemTexture, count = GetInboxItem(self.index,j)
+					local name, itemID, itemTexture, count = GetInboxItem(self.index, j)
 					if name then
 						if count > 1 then
 							GameTooltip:AddLine(GetInboxItemLink(self.index,j).. "x".. count)
