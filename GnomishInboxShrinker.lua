@@ -164,9 +164,9 @@ function BetterInbox:SetupGUI()
 					local name, itemID, itemTexture, count = GetInboxItem(self.index, j)
 					if name then
 						if count > 1 then
-							GameTooltip:AddLine(GetInboxItemLink(self.index,j).. "x".. count)
+							GameTooltip:AddLine(GetInboxItemLink(self.index, j).. "x".. count)
 						else
-							GameTooltip:AddLine(GetInboxItemLink(self.index,j))
+							GameTooltip:AddLine(GetInboxItemLink(self.index, j))
 						end
 					end
 				end
